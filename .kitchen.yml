@@ -1,0 +1,40 @@
+---
+driver:
+  name: vagrant
+  customize:
+    memory: 2048
+  synced_folders:
+    - ["/Volumes/BACKUPS/myfiles/Work", "/data"]
+
+provisioner:
+  name: chef_zero
+  log_level: <%= ENV['CHEF_LOG_LEVEL'] || 'auto' %>
+
+platforms:
+  - name: gannett/gci-centos-68
+    driver:
+      network:
+        - ["forwarded_port", {guest: 80, host: 8084}]
+suites:
+  - name: default
+    run_list:
+      - recipe[gd-test-helper::default]
+#      - recipe[base-centos::default]
+    attributes:
+      ruby-deployment:
+        application:
+          repository: ecommerce-binaries
+          migration_command: "bundle install --deployment && bundle exec rake db:migrate && RAILS_ENV=development bin/rake assets:precompile"
+          app_env: 'development'
+        s3-config-bucket: 'gdp-testing/contractor-management'
+        s3:
+          test_config: true
+          aws_key: <%= ENV['CHEF_RUBY_DEPLOYMENT_AWS_KEY'] %>
+          aws_secret: <%= ENV['CHEF_RUBY_DEPLOYMENT_AWS_SECRET_KEY'] %>
+        nginx:
+          port: 443
+      splunk:
+        environment_override: 'development'
+    chef_client:
+      config:
+        log_level: ":debug"
